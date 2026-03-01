@@ -1,2 +1,2 @@
-# CV-Portfolio
+# SQL Portfolio
 SQL analytics portfolio with case studies
