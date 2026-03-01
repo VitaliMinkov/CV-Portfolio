@@ -1,7 +1,6 @@
--- 10) Клиенты, купившие и Technology, и Office Supplies
--- За последние 12 месяцев найти клиентов,
--- которые покупали товары в двух категориях: Technology и Office Supplies.
--- Для найденных клиентов показать дату первого заказа за период).
+-- 10) Customers who purchased both Technology and Office Supplies
+-- Find customers who bought products from both categories (Technology and Office Supplies) in the last 12 months.
+-- For these customers, show the date of their first order within this period.
 
 WITH last_year_CTE as (
     SELECT customer_id,customer_name, category, order_id, order_date
