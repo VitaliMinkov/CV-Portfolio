@@ -5,7 +5,7 @@ This project is built on transactional retail data (orders, returns, customers, 
 The main objective of the project is to demonstrate a clear understanding and practical application of core SQL techniques, including CTEs, window functions, aggregations, joins (INNER, LEFT), subqueries (including correlated subqueries), CASE expressions, COALESCE, NULL handling (NULLIF), date functions (DATE_TRUNC, intervals), ranking functions (DENSE_RANK, NTILE), filtering with HAVING, and cumulative calculations; 
 and also to show the practical use of these tools for analytical problem-solving, including KPI development, time-series analysis, cohort-style logic, customer segmentation, and business performance evaluation in real-world retail scenarios.
 
-The analysis covers:
+# The analysis covers
 1. KPI and time-series analysis:
 Built monthly metrics by region, including orders, customers, revenue, profit, and profit margin. Calculated MoM and YoY growth using window functions, with safeguards against division by zero.
 
