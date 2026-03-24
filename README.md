@@ -1,7 +1,9 @@
 # SQL Portfolio
 
 This project is built on transactional retail data (orders, returns, customers, and products) and focuses on solving key product and business analytics tasks using PostgreSQL.
-It demonstrates the practical application of SQL for analytical problem-solving, including aggregations, window functions, cohort analysis, customer segmentation, and KPI development, all applied to real-world retail use cases.
+
+The main objective of the project is to demonstrate a clear understanding and practical application of core SQL techniques, including CTEs, window functions, aggregations, joins (INNER, LEFT), subqueries (including correlated subqueries), CASE expressions, COALESCE, NULL handling (NULLIF), date functions (DATE_TRUNC, intervals), ranking functions (DENSE_RANK, NTILE), filtering with HAVING, and cumulative calculations; 
+and also to show the practical use of these tools for analytical problem-solving, including KPI development, time-series analysis, cohort-style logic, customer segmentation, and business performance evaluation in real-world retail scenarios.
 
 The analysis covers:
 1. KPI and time-series analysis:
