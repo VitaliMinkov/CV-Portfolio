@@ -36,56 +36,57 @@ order by month, region;
 -- DAU = number of unique customers who placed an order on that day
 -- New customers = number of customers whose first-ever order occurred on that day
 
-WITH period_cte as (
-    SELECT
-        (CURRENT_DATE - INTERVAL '90 days') as start_date,
-        CURRENT_DATE AS end_date
+with period_cte as (
+    select
+        (current_date - interval '90 days') as start_date,
+        current_date as end_date
 ),
      order_days_cte as (
-         SELECT DISTINCT
+         select distinct
              order_date as day
-FROM orders
+from orders
     JOIN period_cte p
-on order_date BETWEEN p.start_date AND p.end_date
-WHERE order_date IS NOT NULL
+on order_date between p.start_date and p.end_date
+where order_date is not null
     ),
     dau_cte as (
-SELECT
+select
     order_date as day,
-    COUNT(DISTINCT customer_id) as dau
-FROM orders
+    count (distinct customer_id) as dau
+from orders
     JOIN period_cte p
-ON order_date BETWEEN p.start_date AND p.end_date
-WHERE order_date IS NOT NULL
-GROUP BY 1
+on order_date between p.start_date and p.end_date
+where order_date is not null
+group by 1
     ),
     first_order_cte as (
-SELECT
+select
     customer_id,
-    MIN(order_date) as first_day
-FROM orders
-WHERE order_date IS NOT NULL
-GROUP BY customer_id
+    min(order_date) as first_day
+from orders
+where order_date is not null
+group by customer_id
     ),
     new_customers as (
-SELECT
+select
     first_day as day,
     count(*) as new_customers
-FROM first_order_cte
+from first_order_cte
     JOIN period_cte p
-ON first_day BETWEEN p.start_date AND p.end_date
-GROUP BY first_day
+on first_day between p.start_date and p.end_date
+group by first_day
     )
-SELECT
+select
     od.day,
-    COALESCE(d.dau, 0) as dau,
-    COALESCE(n.new_customers, 0) as new_customers
-FROM order_days_cte od
+    coalesce(d.dau, 0) as dau,
+    coalesce(n.new_customers, 0) as new_customers
+from order_days_cte od
          LEFT JOIN dau_cte d
-                   ON d.day = od.day
+                   on d.day = od.day
          LEFT JOIN new_customers n
-                   ON n.day = od.day
-ORDER BY od.day;
+                   on n.day = od.day
+order by od.day;
+
 
 -- 3) Top-3 products by profit margin in each region
 
@@ -110,7 +111,7 @@ select region,
             profit,
             sales,
             margin,
-            dense_rank() over (partition by region order by margin DESC, profit desc, sales desc) as rnk
+            dense_rank() over (partition by region order by margin DESC, profit DESC, sales DESC) as rnk
      from margin_cte) as sub
 where rnk<=3;
 
@@ -131,7 +132,7 @@ with bucket_returns_cte as
                      end as bucket,
                  (r.order_id is not null) as is_returned
           from orders o
-                   left join returns r
+                   LEFT JOIN returns r
                              on o.order_id=r.order_id)
 select category,
        bucket,
@@ -140,30 +141,30 @@ select category,
        round((sum(profit)/nullif(sum(sales),0)),3) as margin,
        round(avg(case when is_returned then 1 else 0 end),3) as return_rate
 from bucket_returns_cte
-group by category, bucket
+group by category, bucket;
 
 -- 5) Shipping delays and average delivery time by ship mode
 -- Calculate the average delivery time by region and ship_mode.
 -- Include only valid dates and return only groups with at least 50 rows.
 
-SELECT
+select
     region,
     ship_mode,
-    COUNT(*) asrows_cnt,
-    ROUND(AVG(ship_days), 2) as avg_ship_days
-FROM (
-         SELECT
+    count(*) as rows_cnt,
+    round(avg(ship_days), 2) as avg_ship_days
+from (
+         select
              region,
              ship_mode,
              ship_date - order_date as ship_days
-         FROM orders
-         WHERE ship_date IS NOT NULL
-           AND order_date IS NOT NULL
-           AND ship_date >= order_date
+         from orders
+         where ship_date is not null
+           and order_date is not null
+           and ship_date >= order_date
      ) as ship
-GROUP BY region, ship_mode
-HAVING COUNT(*) >= 50
-ORDER BY avg_ship_days;
+group by region, ship_mode
+having count(*) >= 50
+order by avg_ship_days;
 
 -- 6) Return rate by manager and category
 -- Show performance metrics by regional manager:
@@ -175,11 +176,13 @@ with managers_cte as
                  p.manager,
                  o.category,
                  o.order_id,
-                 sum(sales) as total_sales,
-                 sum(profit) as total_profit
+                 o.sales as total_sales,
+                 o.profit as total_profit
           from orders o
-                   join people p on p.region=o.region
-          group by 1,2,3,4),
+                    join (select region, max(manager) as manager
+               from people
+               group by region) p on p.region = o.region
+              ),
      return_cte as
          (select m.*,
                  case when r.order_id is not null then 1 else 0 end as returned
@@ -197,11 +200,6 @@ from return_cte
 group by region, manager, category
 having count(*)>100
 order by return_rate DESC, profit ASC;
-
-select region,count(*)
-from people
-group by region
-having count(*)>1;
 
 -- 7) RFM customer segmentation
 -- For each customer, calculate:
@@ -221,9 +219,9 @@ with customer_kpi_cte as
           group by customer_name),
      scores_cte as
          (select *,
-                 ntile(5) over (order by recency_days DESC) as r_score,
-              ntile(5) over (order by frequency ASC) as f_score,
-              ntile(5) over (order by monetary Asc) as m_score
+                 ntile(5) over (order by recency_days ASC) as r_score,
+              ntile(5) over (order by frequency DESC) as f_score,
+              ntile(5) over (order by monetary DESC) as m_score
           from customer_kpi_cte)
 select customer_name,
        recency_days,
@@ -233,12 +231,12 @@ select customer_name,
        f_score,
        m_score,
        case
-           WHEN r_score >= 4 AND f_score >= 4 AND m_score >= 4 THEN 'loyal'
-           WHEN r_score >= 3 AND f_score >= 3 and m_score >= 3  THEN 'active'
-           WHEN r_score >= 2 AND f_score >= 2 and m_score >= 2 THEN 'stable'
-           ELSE 'at risk'
-           END as rfm_segment
-from scores_Cte
+           when r_score >= 4 and f_score >= 4 and m_score >= 4 then 'loyal'
+           when r_score >= 3 and f_score >= 3 and m_score >= 3  then 'active'
+           when r_score >= 2 and f_score >= 2 and m_score >= 2 then 'stable'
+           else 'at risk'
+           end as rfm_segment
+from scores_cte
 order by r_score, f_score, m_score ASC
 
 
@@ -252,7 +250,7 @@ order by r_score, f_score, m_score ASC
     with sales_cte as
 (select customer_name,
        total_sales,
-       sum(total_sales) over (order by total_sales desc) as cum_sales
+       sum(total_sales) over (order by total_sales DESC) as cum_sales
 from (
         select customer_name,
                  sum(sales) as total_sales
@@ -267,12 +265,12 @@ select customer_name,
 from sales_cte sc
 group by 1,2,3
 having cum_sales/(select sales_all from total_sales_cte) <=0.80
-order by total_sales desc;
+order by total_sales DESC;
 
 with sales_cte as
          (select customer_name,
                  total_sales,
-                 sum(total_sales) over (order by total_sales desc) as cum_sales,
+                 sum(total_sales) over (order by total_sales DESC) as cum_sales,
               sum(total_sales) over () as sales_all
           from (
                    select customer_name,
@@ -284,54 +282,54 @@ select customer_name,
        cum_sales,
        round(cum_sales/sales_all,2) as cum_share
 from sales_cte sc
-where cum_sales/sales_all <=0.80
-order by total_sales desc;
+where (cum_sales - total_sales) < sales_all * 0.80
+order by total_sales DESC;
 
 -- 9) Loss-making orders vs customer's average margin
 -- List loss-making orders (profit < 0)
 -- and show the customer's average margin across all of their orders.
 
-SELECT
+select
     o.order_id,
     o.customer_name,
     o.sales,
     o.profit,
     (
-        SELECT
-            SUM(o2.profit) / NULLIF(SUM(o2.sales), 0)
-        FROM orders o2
-        WHERE o2.customer_name = o.customer_name
+        select
+            sum(o2.profit) / nullif(sum(o2.sales), 0)
+        from orders o2
+        where o2.customer_name = o.customer_name
     ) as customer_avg_margin
-FROM orders o
-WHERE o.profit < 0
-ORDER BY o.profit ASC;
+from orders o
+where o.profit < 0
+order by o.profit ASC;
 
 -- 10) Customers who purchased both Technology and Office Supplies
 -- Find customers who bought products from both categories (Technology and Office Supplies) in the last 12 months.
 -- For these customers, show the date of their first order within this period.
 
-WITH last_year_CTE as (
-    SELECT customer_id,customer_name, category, order_id, order_date
-    FROM orders
-    WHERE order_date >= (CURRENT_DATE - INTERVAL '365 days')
+with last_year_cte as (
+    select customer_id, customer_name, category, order_id, order_date
+    from orders
+    where order_date >= (current_date - interval '365 days')
 ),
      buyers_a_cte as (
-         SELECT DISTINCT customer_id, customer_name
-         FROM last_year_cte
-         WHERE category = 'Technology'
+         select distinct customer_id, customer_name
+         from last_year_cte
+         where category = 'Technology'
      ),
      buyers_b_cte as (
-         SELECT DISTINCT customer_id
-         FROM last_year_cte
-         WHERE category = 'Office Supplies'
+         select distinct customer_id
+         from last_year_cte
+         where category = 'Office Supplies'
      )
-SELECT
+select
     a.customer_name,
-    MIN(f.order_date) as first_seen_date
-FROM buyers_a_cte a
+    min(f.order_date) as first_seen_date
+from buyers_a_cte a
          JOIN last_year_cte f on f.customer_id = a.customer_id
-WHERE EXISTS
-          (SELECT 1 FROM buyers_b_cte b
-           WHERE b.customer_id = a.customer_id)
-GROUP BY a.customer_name
-ORDER BY first_seen_date;
+where exists
+          (select 1 from buyers_b_cte b
+           where b.customer_id = a.customer_id)
+group by a.customer_name
+order by first_seen_date;
